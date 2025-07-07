@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: soham
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: frontend
+        version: v1
+    spec:
+      containers:
+      - name: frontend
+        image: sohamdalvi1011/istio-test-frontend:v1
+        ports:
+        - containerPort: 3000
+        env:
+        - name: PORT
+          value: "3000"
+        - name: BACKEND_SERVICE
+          value: "http://backend-service.soham.svc.cluster.local:4000"
