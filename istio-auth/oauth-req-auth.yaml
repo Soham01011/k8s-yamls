@@ -1,0 +1,21 @@
+apiVersion: security.istio.io/v1beta1
+kind: RequestAuthentication
+metadata:
+  name: frontend-jwt-auth
+  namespace: istio-task
+spec:
+  selector:
+    matchLabels:
+      app: frontend
+  jwtRules:
+    - issuer: "soham-auth"
+      jwks: |
+        {
+          "keys": [
+            {
+              "kty": "oct",
+              "k": "c29oYW0tc3VwZXItc2VjcmV0",
+              "alg": "HS256"
+            }
+          ]
+        }
