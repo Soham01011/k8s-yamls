@@ -1,0 +1,27 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: helloworld
+  namespace: shadow
+spec:
+  hosts:
+  - "shadow.192.168.1.244.nip.io"  # Matches all hosts (or use your domain)
+  gateways:
+  - helloworld-gateway
+  http:
+  - route:
+    - destination:
+        host: helloworld
+        subset: v3
+#      weight: 100                       # SHADOW
+#    mirror:                             # SHADOW
+#      host: helloworld                  # SHADOW
+#      subset: v4                        # SHADOW
+#    mirror_percent: 10                 # SHADOW
+      weight: 100                         # CANARY
+#    - destination:                       # CANARY
+#        host: helloworld                 # CANARY
+#        subset: v4                       # CANARY
+#      weight: 20                         # CANARY
+
+ 

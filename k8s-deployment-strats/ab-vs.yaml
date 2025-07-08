@@ -1,0 +1,46 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: podinfo-ab-test
+  namespace: test
+spec:
+  hosts:
+  - "abtesting.192.168.1.244.nip.io" # Your domain or "*"
+  gateways:
+  - ab-test-gateway # Your existing gateway
+  http:
+  - match:
+    - headers:
+        user-agent:
+          regex: ".*Chrome.*"
+    route:
+    - destination:
+        host: nginx-deployment
+        port:
+          number: 80
+    # Add Chrome-specific headers
+    headers:
+      request:
+        set:
+          x-ab-test-group: "chrome"
+
+  - match:
+    - headers:
+        user-agent:
+          regex: ".*Firefox.*"
+    route:
+    - destination:
+        host: podinfo
+        port:
+          number: 9898
+    # Add Firefox-specific headers
+    headers:
+      request:
+        set:
+          x-ab-test-group: "firefox"
+
+  - route: # Default route for other browsers
+    - destination:
+        host: podinfo
+
+ 

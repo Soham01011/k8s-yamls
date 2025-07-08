@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: helloworld-v3
+  namespace: shadow
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: helloworld
+      version: v3
+  template:
+    metadata:
+      labels:
+        app: helloworld
+        version: v3
+    spec:
+      containers:
+      - name: helloworld
+        image: sohamdalvi1011/helloworld:v3
+        ports:
+        - containerPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: helloworld-v4
+  namespace: shadow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: helloworld
+      version: v4
+  template:
+    metadata:
+      labels:
+        app: helloworld
+        version: v4
+    spec:
+      containers:
+      - name: helloworld
+        image: sohamdalvi1011/helloworld:v4
+        ports:
+        - containerPort: 3000 
