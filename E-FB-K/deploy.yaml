@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: helloworld-v4
+  namespace: efbk
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: helloworld
+      version: v4
+  template:
+    metadata:
+      labels:
+        app: helloworld
+        version: v4
+    spec:
+      containers:
+      - name: helloworld
+        image: sohamdalvi1011/helloworld:v4
+        ports:
+        - containerPort: 3000 

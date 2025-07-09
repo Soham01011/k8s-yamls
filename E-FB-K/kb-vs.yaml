@@ -1,0 +1,19 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: kibana-vs
+  namespace: default
+spec:
+  hosts:
+  - "kibana.192.168.1.245.nip.io"  # ⬅️ must match the Gateway
+  gateways:
+  - kibana-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: quickstart-kb-http.default.svc.cluster.local
+        port:
+          number: 5601

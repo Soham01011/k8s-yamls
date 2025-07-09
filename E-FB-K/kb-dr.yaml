@@ -1,0 +1,7 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: kibana-destination
+  namespace: default
+spec:
+  host: quickstart-kb-http.default.svc.cluster.local

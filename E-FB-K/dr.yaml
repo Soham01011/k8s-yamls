@@ -1,0 +1,11 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: helloworld
+  namespace: efbk
+spec:
+  host: helloworld
+  subsets:
+  - name: v4
+    labels:
+      version: v4
