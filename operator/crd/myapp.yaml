@@ -1,0 +1,9 @@
+apiVersion: soham.dev/v1
+kind: MyApp
+metadata:
+  name: randomapp
+spec:
+  appImage: sohamdalvi1011/random-num:v1
+  mongoImage: mongo:6
+  appPVCSize: 1Gi
+  mongoPVCSize: 1Gi
