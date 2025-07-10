@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myapp-operator
+  template:
+    metadata:
+      labels:
+        app: myapp-operator
+    spec:
+      serviceAccountName: myapp-operator
+      containers:
+        - name: operator
+          image: sohamdalvi1011/myapp-operator:v1
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: myapp-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: myapp-operator-role
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services", "persistentvolumeclaims"]
+    verbs: ["*"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["*"]
+  - apiGroups: ["soham.dev"]
+    resources: ["myapps"]
+    verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: myapp-operator-binding
+roleRef:
+  kind: ClusterRole
+  name: myapp-operator-role
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: myapp-operator
+    namespace: default

@@ -1,14 +1,14 @@
 import kopf
 from kubernetes import client, config
 
-# Use in-cluster config when running in Kubernetes
-config.load_incluster_config()
-# config.load_kube_config()  # Uncomment for local testing
+# Load cluster configuration
+config.load_incluster_config()  # Use this inside cluster
+# config.load_kube_config()     # Uncomment for local testing
 
 @kopf.on.create('soham.dev', 'v1', 'myapps')
 def create_myapp(spec, name, namespace, **kwargs):
-    app_image = spec.get('appImage', 'sohamdalvi1011/random-num:v1')
-    mongo_image = spec.get('mongoImage', 'mongo:6')
+    app_image = spec.get('appImage')
+    mongo_image = spec.get('mongoImage')
     app_pvc_size = spec.get('appPVCSize', '1Gi')
     mongo_pvc_size = spec.get('mongoPVCSize', '1Gi')
     app_replicas = spec.get('appReplicas', 1)
@@ -17,25 +17,27 @@ def create_myapp(spec, name, namespace, **kwargs):
     core = client.CoreV1Api()
     apps = client.AppsV1Api()
 
-    # 1. PVC for App
+    # 1. Create ConfigMap
+    mongo_url = f"mongodb://{name}-mongodb:27017"
+    core.create_namespaced_config_map(namespace, client.V1ConfigMap(
+        metadata=client.V1ObjectMeta(name=f'{name}-env'),
+        data={"MONGO_URL": mongo_url}
+    ))
+
+    # 2. PVCs
     core.create_namespaced_persistent_volume_claim(namespace, client.V1PersistentVolumeClaim(
         metadata=client.V1ObjectMeta(name=f'{name}-app-pvc'),
         spec=client.V1PersistentVolumeClaimSpec(
             access_modes=["ReadWriteOnce"],
-            resources=client.V1ResourceRequirements(
-                requests={"storage": app_pvc_size}
-            )
+            resources=client.V1ResourceRequirements(requests={"storage": app_pvc_size})
         )
     ))
 
-    # 2. PVC for MongoDB
     core.create_namespaced_persistent_volume_claim(namespace, client.V1PersistentVolumeClaim(
         metadata=client.V1ObjectMeta(name=f'{name}-mongo-pvc'),
         spec=client.V1PersistentVolumeClaimSpec(
             access_modes=["ReadWriteOnce"],
-            resources=client.V1ResourceRequirements(
-                requests={"storage": mongo_pvc_size}
-            )
+            resources=client.V1ResourceRequirements(requests={"storage": mongo_pvc_size})
         )
     ))
 
@@ -88,12 +90,11 @@ def create_myapp(spec, name, namespace, **kwargs):
                 metadata=client.V1ObjectMeta(labels={"app": f'{name}-app'}),
                 spec=client.V1PodSpec(
                     containers=[client.V1Container(
-                        name="random-num",
+                        name="random-app",
                         image=app_image,
                         ports=[client.V1ContainerPort(container_port=3000)],
-                        env=[client.V1EnvVar(
-                            name="MONGO_URL",
-                            value=f"mongodb://{name}-mongodb:27017"
+                        env_from=[client.V1EnvFromSource(
+                            config_map_ref=client.V1ConfigMapEnvSource(name=f'{name}-env')
                         )],
                         volume_mounts=[client.V1VolumeMount(
                             name="app-storage",
@@ -121,4 +122,4 @@ def create_myapp(spec, name, namespace, **kwargs):
         )
     ))
 
-    return {"message": f"MyApp '{name}' successfully deployed with app + MongoDB."}
+    return {"message": f"MyApp '{name}' resources created successfully."}

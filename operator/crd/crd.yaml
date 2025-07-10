@@ -4,6 +4,13 @@ metadata:
   name: myapps.soham.dev
 spec:
   group: soham.dev
+  names:
+    kind: MyApp
+    plural: myapps
+    singular: myapp
+    shortNames:
+      - myapp
+  scope: Namespaced
   versions:
     - name: v1
       served: true
@@ -26,11 +33,8 @@ spec:
                 appReplicas:
                   type: integer
                   minimum: 1
+                  default: 1
                 mongoReplicas:
                   type: integer
                   minimum: 1
-  scope: Namespaced
-  names:
-    plural: myapps
-    singular: myapp
-    kind: MyApp
+                  default: 1
