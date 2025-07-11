@@ -1,0 +1,13 @@
+# rng-instance.yaml
+apiVersion: operators.sohamdalvi1011.io/v1
+kind: RandomNumberGenerator
+metadata:
+  name: test-rng
+spec:
+  app:
+    replicaCount: 2
+    pvc:
+      size: "1Gi"
+  mongodb:
+    pvc:
+      size: "5Gi"

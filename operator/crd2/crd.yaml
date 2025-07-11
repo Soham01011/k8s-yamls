@@ -1,4 +1,4 @@
-# random-number-crd-minimal-pvc.yaml
+# random-number-operator-all-in-one.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -21,23 +21,19 @@ spec:
                   properties:
                     replicaCount:
                       type: integer
-                      description: Number of random number generator pods to deploy
                       minimum: 1
                       default: 1
                     image:
                       type: string
-                      description: Container image for the random number generator
                       default: "sohamdalvi1011/random-num:v1"
                     port:
                       type: integer
-                      description: Container port on which the application listens
                       default: 3000
                     pvc:
                       type: object
                       properties:
                         size:
                           type: string
-                          description: Storage size for application data (numbers.txt)
                           pattern: '^[1-9]\d*[MGTP]i$'
                           default: "1Gi"
                     resources:
@@ -63,7 +59,6 @@ spec:
                               default: "256Mi"
                     logLevel:
                       type: string
-                      description: Log level for the application
                       enum: ["debug", "info", "warn", "error"]
                       default: "info"
                     service:
@@ -75,39 +70,28 @@ spec:
                           default: "ClusterIP"
                         port:
                           type: integer
-                          description: Service port exposed to clients
                           default: 3000
-                        nodePort:
-                          type: integer
-                          description: Only used when type is NodePort
-                          minimum: 30000
-                          maximum: 32767
                 mongodb:
                   type: object
                   properties:
                     enabled:
                       type: boolean
-                      description: Whether to deploy MongoDB
                       default: true
                     replicaCount:
                       type: integer
-                      description: Number of MongoDB replicas
                       minimum: 1
                       default: 1
                     image:
                       type: string
-                      description: MongoDB container image
                       default: "mongo:latest"
                     port:
                       type: integer
-                      description: MongoDB container port
                       default: 27017
                     pvc:
                       type: object
                       properties:
                         size:
                           type: string
-                          description: Storage size for MongoDB data
                           pattern: '^[1-9]\d*[MGTP]i$'
                           default: "256Mi"
                     resources:
@@ -140,7 +124,6 @@ spec:
                           default: "ClusterIP"
                         port:
                           type: integer
-                          description: MongoDB service port
                           default: 27017
   scope: Namespaced
   names:
@@ -148,3 +131,89 @@ spec:
     singular: randomnumbergenerator
     kind: RandomNumberGenerator
     shortNames: ["rng"]
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rng-system
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: random-number-operator
+  namespace: rng-system
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: random-number-operator
+rules:
+- apiGroups: ["operators.sohamdalvi1011.io"]
+  resources: ["randomnumbergenerators"]
+  verbs: ["*"]
+- apiGroups: [""]
+  resources: ["pods", "services", "persistentvolumeclaims", "namespaces"]
+  verbs: ["*"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["*"]
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["clusterroles", "clusterrolebindings"]
+  verbs: ["*"]
+- apiGroups: ["apiextensions.k8s.io"]
+  resources: ["customresourcedefinitions"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: random-number-operator
+subjects:
+- kind: ServiceAccount
+  name: random-number-operator
+  namespace: rng-system
+roleRef:
+  kind: ClusterRole
+  name: random-number-operator
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: random-number-operator
+  namespace: rng-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: random-number-operator
+  template:
+    metadata:
+      labels:
+        app: random-number-operator
+    spec:
+      serviceAccountName: random-number-operator
+      containers:
+      - name: operator
+        image: sohamdalvi1011/myapp-operator:v3
+        imagePullPolicy: Always
+        env:
+        - name: WATCH_NAMESPACE
+          value: ""
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+      securityContext:
+        runAsNonRoot: false
+        #runAsUser: 1001
