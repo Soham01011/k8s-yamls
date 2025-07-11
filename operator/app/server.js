@@ -12,6 +12,19 @@ const LOG_FILE = process.env.LOG_FILE || 'numbers.log';
 const LOG_DIR = '/data/logs';  // Changed to PVC-mounted path
 const LOG_PATH = path.join(LOG_DIR, LOG_FILE);
 
+// write to file
+function logToFile(number) {
+  const logEntry = `${new Date().toISOString()} - ${number}\n`;
+
+  fs.appendFile(LOG_PATH, logEntry, (err) => {
+    if (err) {
+      console.error(`Failed to write to log file at ${LOG_PATH}:`, err);
+    } else {
+      console.log(`Logged number ${number} to ${LOG_PATH}`);
+    }
+  });
+}
+
 // Create log directory if needed
 if (!fs.existsSync(LOG_DIR)) {
   fs.mkdirSync(LOG_DIR, { recursive: true });
