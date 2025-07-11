@@ -1,0 +1,150 @@
+# random-number-crd-minimal-pvc.yaml
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: randomnumbergenerators.operators.sohamdalvi1011.io
+spec:
+  group: operators.sohamdalvi1011.io
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                app:
+                  type: object
+                  properties:
+                    replicaCount:
+                      type: integer
+                      description: Number of random number generator pods to deploy
+                      minimum: 1
+                      default: 1
+                    image:
+                      type: string
+                      description: Container image for the random number generator
+                      default: "sohamdalvi1011/random-num:v1"
+                    port:
+                      type: integer
+                      description: Container port on which the application listens
+                      default: 3000
+                    pvc:
+                      type: object
+                      properties:
+                        size:
+                          type: string
+                          description: Storage size for application data (numbers.txt)
+                          pattern: '^[1-9]\d*[MGTP]i$'
+                          default: "1Gi"
+                    resources:
+                      type: object
+                      properties:
+                        requests:
+                          type: object
+                          properties:
+                            cpu:
+                              type: string
+                              default: "100m"
+                            memory:
+                              type: string
+                              default: "128Mi"
+                        limits:
+                          type: object
+                          properties:
+                            cpu:
+                              type: string
+                              default: "200m"
+                            memory:
+                              type: string
+                              default: "256Mi"
+                    logLevel:
+                      type: string
+                      description: Log level for the application
+                      enum: ["debug", "info", "warn", "error"]
+                      default: "info"
+                    service:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          enum: ["ClusterIP", "NodePort", "LoadBalancer"]
+                          default: "ClusterIP"
+                        port:
+                          type: integer
+                          description: Service port exposed to clients
+                          default: 3000
+                        nodePort:
+                          type: integer
+                          description: Only used when type is NodePort
+                          minimum: 30000
+                          maximum: 32767
+                mongodb:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      description: Whether to deploy MongoDB
+                      default: true
+                    replicaCount:
+                      type: integer
+                      description: Number of MongoDB replicas
+                      minimum: 1
+                      default: 1
+                    image:
+                      type: string
+                      description: MongoDB container image
+                      default: "mongo:latest"
+                    port:
+                      type: integer
+                      description: MongoDB container port
+                      default: 27017
+                    pvc:
+                      type: object
+                      properties:
+                        size:
+                          type: string
+                          description: Storage size for MongoDB data
+                          pattern: '^[1-9]\d*[MGTP]i$'
+                          default: "256Mi"
+                    resources:
+                      type: object
+                      properties:
+                        requests:
+                          type: object
+                          properties:
+                            cpu:
+                              type: string
+                              default: "250m"
+                            memory:
+                              type: string
+                              default: "300Mi"
+                        limits:
+                          type: object
+                          properties:
+                            cpu:
+                              type: string
+                              default: "500m"
+                            memory:
+                              type: string
+                              default: "800Mi"
+                    service:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          enum: ["ClusterIP", "NodePort"]
+                          default: "ClusterIP"
+                        port:
+                          type: integer
+                          description: MongoDB service port
+                          default: 27017
+  scope: Namespaced
+  names:
+    plural: randomnumbergenerators
+    singular: randomnumbergenerator
+    kind: RandomNumberGenerator
+    shortNames: ["rng"]
