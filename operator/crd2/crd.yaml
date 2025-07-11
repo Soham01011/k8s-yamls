@@ -202,7 +202,7 @@ spec:
       serviceAccountName: random-number-operator
       containers:
       - name: operator
-        image: sohamdalvi1011/myapp-operator:v3
+        image: sohamdalvi1011/myapp-operator:v4
         imagePullPolicy: Always
         env:
         - name: WATCH_NAMESPACE

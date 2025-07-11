@@ -3,6 +3,12 @@ import kubernetes.client
 from kubernetes.client import ApiClient
 import yaml
 
+@kopf.on.startup()
+def configure(settings: kopf.OperatorSettings, **_):
+    settings.persistence.finalizer = 'randomnumbergenerator.operators.sohamdalvi1011.io/finalizer'
+    settings.watching.server_timeout = 60
+    settings.watching.client_timeout = 60
+
 @kopf.on.create('operators.sohamdalvi1011.io', 'v1', 'randomnumbergenerators')
 def create_fn(spec, name, namespace, logger, **kwargs):
     # Create MongoDB resources if enabled
@@ -12,10 +18,11 @@ def create_fn(spec, name, namespace, logger, **kwargs):
     # Create Random Number App resources
     create_app_resources(spec, name, namespace, logger)
     
-    return {'message': 'RandomNumberGenerator resources created'}
+    return {'message': 'Resources created successfully'}
 
 def create_mongodb_resources(spec, name, namespace, logger):
     mongodb_spec = spec.get('mongodb', {})
+    mongo_service_name = f"{name}-mongodb"
     
     # MongoDB PVC
     mongo_pvc = {
@@ -41,7 +48,7 @@ def create_mongodb_resources(spec, name, namespace, logger):
         'apiVersion': 'apps/v1',
         'kind': 'Deployment',
         'metadata': {
-            'name': f'{name}-mongodb',
+            'name': mongo_service_name,
             'namespace': namespace,
             'labels': {'app': 'mongodb', 'instance': name}
         },
@@ -81,7 +88,7 @@ def create_mongodb_resources(spec, name, namespace, logger):
         'apiVersion': 'v1',
         'kind': 'Service',
         'metadata': {
-            'name': f'{name}-mongodb',
+            'name': mongo_service_name,
             'namespace': namespace,
             'labels': {'app': 'mongodb', 'instance': name}
         },
@@ -106,10 +113,12 @@ def create_mongodb_resources(spec, name, namespace, logger):
     api.create_namespaced_persistent_volume_claim(namespace, mongo_pvc)
     apps_api.create_namespaced_deployment(namespace, mongo_deployment)
     api.create_namespaced_service(namespace, mongo_service)
-    logger.info(f"MongoDB resources created for {name}")
+    logger.info(f"MongoDB resources created with service name: {mongo_service_name}")
 
 def create_app_resources(spec, name, namespace, logger):
     app_spec = spec.get('app', {})
+    mongo_service_name = f"{name}-mongodb"
+    mongo_port = spec.get('mongodb', {}).get('service', {}).get('port', 27017)
     
     # App PVC
     app_pvc = {
@@ -130,7 +139,7 @@ def create_app_resources(spec, name, namespace, logger):
         }
     }
     
-    # App Deployment
+    # App Deployment with automatic MongoDB URI
     app_deployment = {
         'apiVersion': 'apps/v1',
         'kind': 'Deployment',
@@ -151,23 +160,43 @@ def create_app_resources(spec, name, namespace, logger):
                 'spec': {
                     'containers': [{
                         'name': 'random-number',
-                        'image': app_spec.get('image', 'sohamdalvi1011/random-num:v1'),
+                        'image': app_spec.get('image', 'sohamdalvi1011/random-num:v2'),
                         'ports': [{'containerPort': app_spec.get('port', 3000)}],
                         'volumeMounts': [{
                             'name': 'app-data',
-                            'mountPath': '/app'
+                            'mountPath': '/data'
                         }],
                         'env': [
                             {
                                 'name': 'MONGO_URI',
-                                'value': f'mongodb://{name}-mongodb:{spec.get("mongodb", {}).get("service", {}).get("port", 27017)}/randomNumbers'
+                                'value': f'mongodb://{mongo_service_name}:{mongo_port}/randomNumbers'
                             },
                             {
                                 'name': 'LOG_LEVEL',
                                 'value': app_spec.get('logLevel', 'info')
+                            },
+                            {
+                                'name': 'LOG_DIR',
+                                'value': '/data/logs'
                             }
                         ],
-                        'resources': app_spec.get('resources', {})
+                        'resources': app_spec.get('resources', {}),
+                        'readinessProbe': {
+                            'httpGet': {
+                                'path': '/health',
+                                'port': app_spec.get('port', 3000)
+                            },
+                            'initialDelaySeconds': 10,
+                            'periodSeconds': 5
+                        },
+                        'livenessProbe': {
+                            'httpGet': {
+                                'path': '/health',
+                                'port': app_spec.get('port', 3000)
+                            },
+                            'initialDelaySeconds': 30,
+                            'periodSeconds': 10
+                        }
                     }],
                     'volumes': [{
                         'name': 'app-data',
@@ -188,8 +217,7 @@ def create_app_resources(spec, name, namespace, logger):
         'metadata': {
             'name': f'{name}-service',
             'namespace': namespace,
-            'labels': {'app': 'random-number', 'instance': name},
-            'annotations': service_spec.get('annotations', {})
+            'labels': {'app': 'random-number', 'instance': name}
         },
         'spec': {
             'ports': [{
@@ -213,12 +241,12 @@ def create_app_resources(spec, name, namespace, logger):
     api.create_namespaced_persistent_volume_claim(namespace, app_pvc)
     apps_api.create_namespaced_deployment(namespace, app_deployment)
     api.create_namespaced_service(namespace, app_service)
-    logger.info(f"RandomNumberApp resources created for {name}")
+    logger.info(f"App resources created with MongoDB URI: mongodb://{mongo_service_name}:{mongo_port}/randomNumbers")
 
 @kopf.on.delete('operators.sohamdalvi1011.io', 'v1', 'randomnumbergenerators')
 def delete_fn(name, namespace, logger, **kwargs):
-    logger.info(f"Deleted RandomNumberGenerator {name} in namespace {namespace}")
+    logger.info(f"Cleaning up resources for {name} in {namespace}")
 
 @kopf.on.update('operators.sohamdalvi1011.io', 'v1', 'randomnumbergenerators')
 def update_fn(spec, name, namespace, logger, **kwargs):
-    logger.info(f"Updating RandomNumberGenerator {name} with new spec: {spec}")
+    logger.info(f"Updating {name} with new configuration")

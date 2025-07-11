@@ -2,101 +2,118 @@ const express = require('express');
 const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configuration
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/numbersDB';
+// Enhanced Configuration
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://mongodb:27017/numbersDB'; // Changed to service name
 const LOG_FILE = process.env.LOG_FILE || 'numbers.log';
-const LOG_DIR = path.join(__dirname, 'logs');
+const LOG_DIR = '/data/logs';  // Changed to PVC-mounted path
 const LOG_PATH = path.join(LOG_DIR, LOG_FILE);
 
-// Ensure log directory exists
+// Create log directory if needed
 if (!fs.existsSync(LOG_DIR)) {
   fs.mkdirSync(LOG_DIR, { recursive: true });
 }
 
 // Number schema and model
 const numberSchema = new mongoose.Schema({
-  value: {
-    type: Number,
-    required: true
-  },
-  timestamp: {
-    type: Date,
-    default: Date.now
-  }
+  value: { type: Number, required: true },
+  timestamp: { type: Date, default: Date.now }
 });
-
 const NumberModel = mongoose.model('Number', numberSchema);
 
-// Connect to MongoDB
+// Enhanced MongoDB connection with retries
 async function connectDB() {
-  try {
-    await mongoose.connect(MONGO_URI);
-    console.log('Connected to MongoDB');
-  } catch (error) {
-    console.error('MongoDB connection error:', error);
-    process.exit(1);
+  const maxRetries = 5;
+  let retryCount = 0;
+  
+  while (retryCount < maxRetries) {
+    try {
+      await mongoose.connect(MONGO_URI, {
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 45000
+      });
+      console.log('Connected to MongoDB');
+      return;
+    } catch (error) {
+      retryCount++;
+      console.error(`MongoDB connection attempt ${retryCount} failed:`, error.message);
+      if (retryCount === maxRetries) {
+        console.error('Max retries reached. Exiting...');
+        process.exit(1);
+      }
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
   }
 }
 
-// Log number to file
-function logToFile(number) {
-  const logEntry = `${new Date().toISOString()} - ${number}\n`;
-  fs.appendFile(LOG_PATH, logEntry, (err) => {
-    if (err) {
-      console.error('Error writing to log file:', err);
-    }
+// Start server independently of MongoDB
+async function startServer() {
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Logging numbers to: ${LOG_PATH}`);
+  });
+
+  // Enhanced error handling
+  server.on('error', (error) => {
+    console.error('Server error:', error);
+    process.exit(1);
   });
 }
 
 // Middleware
 app.use(express.json());
 
-// Ping endpoint
-app.get('/ping', (req, res) => {
-  res.json({ message: 'pong', timestamp: new Date().toISOString() });
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'UP',
+    db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Random number endpoint
 app.get('/random', async (req, res) => {
-  const randomNumber = Math.floor(Math.random() * 1000); // 0-999
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({ error: 'Database not connected' });
+  }
+
+  const randomNumber = Math.floor(Math.random() * 1000);
   
   try {
-    // Save to MongoDB
     const newNumber = await NumberModel.create({ value: randomNumber });
-    
-    // Log to console
-    console.log(`Generated random number: ${randomNumber}`);
-    
-    // Log to file
     logToFile(randomNumber);
-    
     res.json({ 
       number: randomNumber,
       dbId: newNumber._id,
-      timestamp: newNumber.timestamp,
-      loggedToFile: true
+      timestamp: newDate().toISOString()
     });
-    
   } catch (error) {
-    console.error('Error processing number:', error);
-    res.status(500).json({ error: 'Failed to process number' });
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Processing failed' });
   }
 });
 
-// Start server
-connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Logging numbers to: ${LOG_PATH}`);
-  });
-});
+// Start everything
+(async () => {
+  try {
+    await connectDB();
+    await startServer();
+  } catch (error) {
+    console.error('Fatal startup error:', error);
+    process.exit(1);
+  }
+})();
 
 // Handle shutdown
-process.on('SIGINT', async () => {
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
+
+async function gracefulShutdown() {
+  console.log('Shutting down gracefully...');
   await mongoose.disconnect();
-  console.log('Disconnected from MongoDB');
   process.exit(0);
-});
+}
