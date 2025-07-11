@@ -1,13 +1,18 @@
-# rng-instance.yaml
 apiVersion: operators.sohamdalvi1011.io/v1
 kind: RandomNumberGenerator
 metadata:
   name: test-rng
+  namespace: default
 spec:
   app:
     replicaCount: 2
     pvc:
-      size: "1Gi"
+      size: 1Gi
+    service:
+      type: "NodePort"
+      port: 3000
   mongodb:
+    enabled: true
+    replicaCount: 1
     pvc:
-      size: "5Gi"
+      size: 3Gi

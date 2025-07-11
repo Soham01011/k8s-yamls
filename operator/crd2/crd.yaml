@@ -71,6 +71,10 @@ spec:
                         port:
                           type: integer
                           default: 3000
+                        nodePort:
+                          type: integer
+                          minimum: 30000
+                          maximum: 32767
                 mongodb:
                   type: object
                   properties:
