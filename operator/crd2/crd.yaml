@@ -125,6 +125,8 @@ spec:
                         port:
                           type: integer
                           default: 27017
+      subresources:
+        status: {}     
   scope: Namespaced
   names:
     plural: randomnumbergenerators
