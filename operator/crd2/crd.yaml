@@ -25,7 +25,7 @@ spec:
                       default: 1
                     image:
                       type: string
-                      default: "sohamdalvi1011/random-num:v1"
+                      default: "sohamdalvi1011/random-num:v2"
                     port:
                       type: integer
                       default: 3000
