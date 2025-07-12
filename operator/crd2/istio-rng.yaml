@@ -1,0 +1,40 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: rng
+spec:
+  host: test-rng-mongodb.default.svc.cluster.local
+---
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: test-rng-gw
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+     - "rng.192.168.1.247.nip.io"
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: rng-vs
+spec:
+  hosts:
+    - "rng.192.168.1.247.nip.io"
+  gateways:
+    - test-rng-gw
+  http:
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: test-rng-service.default.svc.cluster.local
+            port:
+              number: 3000

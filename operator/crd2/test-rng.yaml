@@ -9,8 +9,7 @@ spec:
     pvc:
       size: 1Gi
     service:
-      type: "NodePort"
-      port: 3000
+      type: "ClusterIP"
   mongodb:
     enabled: true
     replicaCount: 1
