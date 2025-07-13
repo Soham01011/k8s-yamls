@@ -1,0 +1,36 @@
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: nginx-gw
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "nginx.192.168.1.245.nip.io"
+
+---
+
+# nginx-virtualservice.yaml
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: nginx-vs
+spec:
+  hosts:
+  - "nginx.192.168.1.245.nip.io"
+  gateways:
+  - nginx-gw
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: nginx-service.default.svc.cluster.local
+        port:
+          number: 80
