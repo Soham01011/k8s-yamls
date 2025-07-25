@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dns-debug
+  namespace: istio-system
+spec:
+  containers:
+  - name: debug-container
+    image: busybox:1.36
+    command: ['sh', '-c', 'sleep 1h']
+  nodeName: worker2 # <-- IMPORTANT: Target a non-working node

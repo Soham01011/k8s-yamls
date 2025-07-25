@@ -14,7 +14,9 @@ const LOG_PATH = path.join(LOG_DIR, LOG_FILE);
 
 // write to file
 function logToFile(number) {
-  const logEntry = `${new Date().toISOString()} - ${number}\n`;
+  const date = new Date();
+  date = date.toLocaleString();
+  const logEntry = `${date} - ${number}\n`;
 
   fs.appendFile(LOG_PATH, logEntry, (err) => {
     if (err) {

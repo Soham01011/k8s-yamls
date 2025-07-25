@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  annotations:
+    pv.kubernetes.io/bind-completed: "yes"
+    pv.kubernetes.io/bound-by-controller: "yes"
+    strimzi.io/delete-claim: "false"
+    volume.beta.kubernetes.io/storage-provisioner: cluster.local/nfs-storage-nfs-subdir-external-provisioner
+    volume.kubernetes.io/storage-provisioner: cluster.local/nfs-storage-nfs-subdir-external-provisioner
+  creationTimestamp: "2025-07-24T08:53:29Z"
+  finalizers:
+  - kubernetes.io/pvc-protection
+  labels:
+    app.kubernetes.io/instance: my-cluster
+    app.kubernetes.io/managed-by: strimzi-cluster-operator
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/part-of: strimzi-my-cluster
+    strimzi.io/cluster: my-cluster
+    strimzi.io/component-type: kafka
+    strimzi.io/kind: Kafka
+    strimzi.io/name: my-cluster-kafka
+    strimzi.io/pool-name: dual-role
+  name: data-0-my-cluster-dual-role-0
+  namespace: kafka
+  resourceVersion: "27248"
+  uid: a748dfd1-3497-46d6-8e8d-3a23d5cee293
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: nfs-storage
+  volumeMode: Filesystem
+  volumeName: pvc-a748dfd1-3497-46d6-8e8d-3a23d5cee293
+status:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 50Gi
+  phase: Bound
