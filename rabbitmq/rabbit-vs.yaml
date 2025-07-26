@@ -1,0 +1,15 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: rabbitmq-vs
+spec:
+  hosts:
+  - "rabbitmq.192.168.1.245.nip.io"
+  gateways:
+  - rabbitmq-gateway
+  http:
+  - route:
+    - destination:
+        host: rabbitmq-ui.soham.svc.cluster.local
+        port:
+          number: 15672

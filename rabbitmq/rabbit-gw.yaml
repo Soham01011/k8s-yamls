@@ -1,0 +1,14 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: rabbitmq-gateway
+spec:
+  selector:
+    istio: istio-ingressgateway
+  servers:
+  - port:
+      number: 15672
+      name: http
+      protocol: HTTP
+    hosts:
+      - "rabbitmq.192.168.1.245.nip.io"
