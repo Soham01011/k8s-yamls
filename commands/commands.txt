@@ -1,0 +1,14 @@
+k8s repo 1.33
+
+cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://pkgs.k8s.io/core:/stable:/v1.33/rpm/
+enabled=1
+gpgcheck=1
+gpgkey=https://pkgs.k8s.io/core:/stable:/v1.33/rpm/repodata/repomd.xml.key
+EOF
+
+dd command 
+
+sudo dd if=gparted-live-1.7.0-8-amd64.iso of=/dev/sdb bs=4M status=progress oflag=sync

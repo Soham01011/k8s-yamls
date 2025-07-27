@@ -1,0 +1,38 @@
+# nginx-gateway.yaml
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: nginx-gateway
+  namespace: istio-system
+spec:
+  gatewayClassName: istio
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: "nginx.192.168.1.245.nip.io"
+      allowedRoutes:
+        namespaces:
+          from: All
+---
+# nginx-route.yaml
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: nginx-route
+  namespace: default  # same as your nginx service
+spec:
+  parentRefs:
+    - name: nginx-gateway
+      namespace: istio-system
+  hostnames:
+    - "nginx.192.168.1.245.nip.io"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: nginx
+          port: 80
+
