@@ -12,3 +12,20 @@ EOF
 dd command 
 
 sudo dd if=gparted-live-1.7.0-8-amd64.iso of=/dev/sdb bs=4M status=progress oflag=sync
+
+kafka 
+
+dsw@ubuntu:~$ oc exec -it pod/my-cluster-kafka-1 -n soham -- sh
+Defaulted container "kafka" out of: kafka, kafka-init (init)
+sh-5.1$ bin/kafka-console-producer.sh --broker-list 192.168.50.110:30317 --topic gappe
+>HHEHEHEHEHEHHE
+>HELLO WOLRD
+
+dsw@ubuntu:~$ oc exec  -it pod/my-cluster-kafka-2 -n soham -- sh
+Defaulted container "kafka" out of: kafka, kafka-init (init)
+sh-5.1$ ./bin/kafka-console-consumer.sh --bootstrap-server 192.168.50.110:30317 --topic gappe
+^CProcessed a total of 0 messages
+sh-5.1$ ./bin/kafka-console-consumer.sh --bootstrap-server 192.168.50.110:30317 --topic gappe --from-beginning
+HIHIHIHIHI
+HHEHEHEHEHEHHE
+HELLO WOLRD
