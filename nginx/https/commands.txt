@@ -1,0 +1,9 @@
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.1/deploy/static/provider/cloud/deploy.yaml
+
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -subj "/CN=nginx.local" \
+  -keyout tls.key -out tls.crt
+
+kubectl create secret tls nginx-tls \
+  --key tls.key \
+  --cert tls.crt

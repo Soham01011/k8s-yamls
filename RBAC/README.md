@@ -1,5 +1,3 @@
-
-
 ## 📘 Guide: Grant a User (`Bhidu`) Read-Only Access to the `default` Namespace in Kubernetes Using the CSR API
 
 This guide walks through generating a client certificate and configuring `kubectl` for user-level access.
@@ -185,4 +183,4 @@ You should now see pods in the `default` namespace — but only **read-only**, n
 
 ---
 
-Would you like this exported into a Markdown or PDF format for internal documentation? I can generate that next.
+#### P.S. : This was tested on k3s cluster so while using it mind the certificate location of your cluster respectively.
