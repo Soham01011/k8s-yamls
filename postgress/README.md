@@ -138,7 +138,151 @@ spec:
 Apply this yaml and your cluster with the credentiasl will be created.
 
 Here below is a sample architecture
+
 ![Logo](https://cloudnative-pg.io/documentation/1.27/images/architecture-in-k8s.png)
+
+## Backups
+
+### This is a quick backup and setup, I wont recommend doing backup process for the large databases.
+
+With the current setup that we made you can create a few records in the db to verify that the backup we created has worked.
+
+So lets start with auotmated backups, for this we will use the built in cronjob resource of the kubernets.
+
+Here is the YAML file for it : 
+```yaml
+# cronjob-pg-bkp.yaml
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pg-backup-pv
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: /mnt/pg-bkp
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: app-backup-pvc
+  namespace: pg-db
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  selector:
+    matchLabels:
+      type: local
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: app-db-backup
+  namespace: pg-db
+spec:
+  schedule: "*/2 * * * *"  
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: pg-backup
+              image: postgres:18
+              env:
+                - name: PGHOST
+                  value: "cluster-example-initdb-rw.pg-db.svc"  
+                - name: PGUSER
+                  valueFrom:
+                    secretKeyRef:
+                      name: app-secret
+                      key: username
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: app-secret
+                      key: password
+                - name: PGDATABASE
+                  value: "app"
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -e
+                  echo "Starting pg_dump at $(date)"
+                  mkdir -p /backup
+                  pg_dump -Fc -f /backup/appdb-$(date +%Y%m%d-%H%M).dump
+                  echo "Backup completed at $(date)"
+                  find /backup -type f -mtime +7 -delete
+              volumeMounts:
+                - name: backup-volume
+                  mountPath: /backup
+          volumes:
+            - name: backup-volume
+              persistentVolumeClaim:
+                claimName: app-backup-pvc
+```
+
+This yaml has all of it to create the backup with the pg.dump() command and save the dump to local path storage at /mnt/pg-bkp folder path. This cornjob runns every 2 mins you can change it as per your requirements to backup everyday at any giving time period.
+
+So then apply this given yaml with : 
+``` bash
+kubectl apply -f cronjob-pg-bkp.yaml
+```
+
+Check the cronjob are there and jobs are running by 
+``` bash
+kubectl get cj 
+kubectl get jobs
+```
+
+Once the jobs pods are completed thus the dump files are created at the give folder path. Thus we have successfully set the auotmated backup process.
+
+Now we need to mount the dump file into another database. For this we need another postgres pod since the pod of the postgres cluster have the read only permission.
+
+So to create a postgres pod real quick run this command : 
+``` bash
+ kubectl run pg-restore \
+  -n pg-db \
+  --image=postgres:18 \
+  --restart=Never \
+  -- sleep infinity
+```
+
+This will create a postgres pod for a temporary purpose of the backup, once the conatiner spins up now we can scp the locally saved dump fiel into the ephimeral storage of the pod : 
+
+```bash
+kubectl cp /mnt/pg-bkp/appdb-20251101-0714.dump -n pg-db pg-restore:/tmp/appdb.dum
+```
+
+Next exec into the temporary pod of the postgres and run the command to dump the db into the new cluster : 
+``` bash
+kubectl exec -it -n pg-db pg-restore -- bash
+```
+
+Now form the test pod check the connection with new pg database where you want to load the backup files : 
+
+```bash
+PGPASSWORD='password' psql -U app -h cluster-example-initdb-rw.pg-db.svc.cluster.local -d app -c '\conninfo
+```
+
+If the connection is good then we are good to go for backup 
+
+``` bash
+PGPASSWORD='password' pg_restore -U app -h cluster-example-initdb-rw.pg-db.svc.cluster.local -d app -Fc /tmp/appdb.dump
+```
+
+And that's it with this we have successfully backed up out pg data to a new database.
 
 ---
 

@@ -1,0 +1,79 @@
+# pg-backup-pv-pvc.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pg-backup-pv
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: /mnt/pg-bkp
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: app-backup-pvc
+  namespace: pg-db
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  selector:
+    matchLabels:
+      type: local
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: app-db-backup
+  namespace: pg-db
+spec:
+  schedule: "*/2 * * * *"  # every day at 2AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: pg-backup
+              image: postgres:18
+              env:
+                - name: PGHOST
+                  value: "cluster-example-initdb-rw.pg-db.svc"  # CNPG RW service
+                - name: PGUSER
+                  valueFrom:
+                    secretKeyRef:
+                      name: app-secret
+                      key: username
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: app-secret
+                      key: password
+                - name: PGDATABASE
+                  value: "app"
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -e
+                  echo "Starting pg_dump at $(date)"
+                  mkdir -p /backup
+                  pg_dump -Fc -f /backup/appdb-$(date +%Y%m%d-%H%M).dump
+                  echo "Backup completed at $(date)"
+                  find /backup -type f -mtime +7 -delete
+              volumeMounts:
+                - name: backup-volume
+                  mountPath: /backup
+          volumes:
+            - name: backup-volume
+              persistentVolumeClaim:
+                claimName: app-backup-pvc
